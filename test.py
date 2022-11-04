@@ -7,7 +7,7 @@ import serial
 import csv
 import datetime
 
-
+#change com port
 # ad = serial.Serial('/dev/cu.usbmodem1301',115200)
 sleep(1)
 
@@ -66,6 +66,17 @@ scene2 = canvas(align="right",title="",width=display_x/3.0,height=display_y/3.5)
 scene2.select()
 l = label(color=color.red,text=f"roll:{roll}\npitch:{pitch}\nyaw:{yaw}\naltitude:\ngps:\nvelocity:\nacceleration:",box=False,pos=vector(0,5,0),height=20,)
 
+isStart = False
+
+def switchCSV():
+    global isStart
+    isStart = not isStart
+    if(isStart):
+        vb.text = "stop CSV"
+    else:
+        vb.text = "start csv"
+vb=button(bind=switchCSV,text="start csv")
+
 
 def updateSim():
 
@@ -87,7 +98,6 @@ def updateSim():
 
 def drawGraph():  
     global t 
-    # roll_curve.plot(time,yaw)  
     g1.plot(t,roll)
     g2.plot(t,pitch)
     g3.plot(t,yaw)
@@ -139,7 +149,8 @@ while (True):
             data = ["roll","pitch","yaw"]
             print(data)
             #TODO: send data for csv file writing
-            addCSV(data)
+            if(isStart):
+                addCSV(data)
 
      
     except:

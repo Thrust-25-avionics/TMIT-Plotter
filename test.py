@@ -5,19 +5,25 @@ import numpy as np
 import math
 import serial
 import csv
+import atexit
 import datetime
 
 #change com port
-# ad = serial.Serial('/dev/cu.usbmodem1301',115200)
+ad = serial.Serial('/dev/cu.usbmodem1301',115200)
 sleep(1)
 
 display_x = 1350
 display_y = 1080.0-40.0
 
+#defining global variables for all parameters
 roll=0
 pitch=0
 yaw=0
+alt=0
+press=0
+vel=0
 t=0
+
 
 #Graph 1: altitude 
 graph1=graph(align="left",title="altitude",xtitle="time",ytitle="altitude",width=display_x/3,height=display_y/4,fast=False)
@@ -56,9 +62,12 @@ g3.plot(2,6)
 
 #Graph 4: gyro
 graph4=graph(align="left",title="gyro",xtitle="time",ytitle="gyro",width=display_x/3,height=display_y/4,fast=False)
-g4 = gcurve(color=color.green,graph=graph4)
-g4.plot(1,5)
-g4.plot(2,6)
+roll_curve = gcurve(color=color.green,graph=graph4)
+pitch_curve = gcurve(color=color.green,graph=graph4)
+yaw_curve = gcurve(color=color.green,graph=graph4)
+
+roll_curve.plot(1,5)
+pitch_curve.plot(2,6)
 
 
 #scene 2: raw data
@@ -66,13 +75,14 @@ scene2 = canvas(align="right",title="",width=display_x/3.0,height=display_y/3.5)
 scene2.select()
 l = label(color=color.red,text=f"roll:{roll}\npitch:{pitch}\nyaw:{yaw}\naltitude:\ngps:\nvelocity:\nacceleration:",box=False,pos=vector(0,5,0),height=20,)
 
+#to track whether csv is start or stop
 isStart = False
 
 def switchCSV():
     global isStart
     isStart = not isStart
     if(isStart):
-        vb.text = "stop CSV"
+        vb.text = "stop csv"
     else:
         vb.text = "start csv"
 vb=button(bind=switchCSV,text="start csv")
@@ -98,9 +108,9 @@ def updateSim():
 
 def drawGraph():  
     global t 
-    g1.plot(t,roll)
-    g2.plot(t,pitch)
-    g3.plot(t,yaw)
+    roll_curve.plot(t,roll)
+    pitch_curve.plot(t,pitch)
+    yaw_curve.plot(t,yaw)
     t+=1
 
 def updateText():
@@ -108,17 +118,24 @@ def updateText():
     l.text = f"roll:{roll}\npitch:{pitch}\nyaw:{yaw}"
 
 def addCSV(data):
-    print("c")
-    data.insert(0,datetime.now().time().strftime("%H:%M:%S")) #for timestamp
-
-    print(data)
+    # data.insert(0,datetime.now().time().strftime("%H:%M:%S")) #for timestamp
     with open("FlightData.csv", "a") as f: #csv
         writer = csv.writer(f, delimiter=",")
         writer.writerow(data)
 
+def reset():
+    #reset the animation
+    #reset the datalogging
+    pass
+
+#functions to be executed at kill
+def exit_func():
+    #TODO:add functions to be executed at stop
+    print("function stoppped")
+atexit.register(exit_func)
 
 while (True):
-    # pass
+    rate(100)
     try:
         while (ad.inWaiting()==0):
             pass
@@ -130,28 +147,29 @@ while (True):
             q1=float(splitPacket[2])
             q2=float(splitPacket[3])
             q3=float(splitPacket[4])
-    
+            # alt=
+            # press=
+            # vel=
+
             roll=-math.atan2(2*(q0*q1+q2*q3),1-2*(q1*q1+q2*q2))
             pitch=math.asin(2*(q0*q2-q3*q1))
             yaw=-math.atan2(2*(q0*q3+q1*q2),1-2*(q2*q2+q3*q3))-np.pi/2
+            
+            data=[alt,press,vel,roll,pitch,yaw]
 
-            rate(100)
 
             updateSim()
 
             #TODO: plot graphs in drawGraph() 
             drawGraph()
-            print("a")
             #update raw data text
             updateText()
-            print("b")
+            #write csv
+            addCSV(data)
             
-            data = ["roll","pitch","yaw"]
-            print(data)
-            #TODO: send data for csv file writing
-            if(isStart):
-                addCSV(data)
+            
 
      
     except:
+        # print("exception")
         pass
